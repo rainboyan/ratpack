@@ -33,6 +33,7 @@ import ratpack.registry.MutableRegistry;
 import ratpack.registry.NotInRegistryException;
 import ratpack.registry.Registry;
 import ratpack.registry.RegistrySpec;
+import ratpack.registry.internal.HierarchicalMutableRegistry;
 import ratpack.registry.internal.SimpleMutableRegistry;
 import ratpack.stream.TransformablePublisher;
 
@@ -56,7 +57,7 @@ public class DefaultExecution implements Execution {
 
   private List<AutoCloseable> closeables;
 
-  private final MutableRegistry registry = new SimpleMutableRegistry();
+  private final MutableRegistry registry;
 
   private List<ExecInterceptor> adhocInterceptors;
   private Iterable<? extends ExecInterceptor> interceptors;
@@ -64,6 +65,7 @@ public class DefaultExecution implements Execution {
   public DefaultExecution(
     ExecControllerInternal controller,
     EventLoop eventLoop,
+    Registry baseRegistry,
     Action<? super RegistrySpec> registryInit,
     Action<? super Execution> action,
     Action<? super Throwable> onError,
@@ -75,7 +77,7 @@ public class DefaultExecution implements Execution {
     this.onError = onError;
     this.onComplete = onComplete;
 
-    registryInit.execute(registry);
+    this.registry = new HierarchicalMutableRegistry(baseRegistry, registryInit.with(new SimpleMutableRegistry()));
     onStart.execute(this);
 
     this.execStream = new InitialExecStream(action);
